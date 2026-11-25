@@ -11,5 +11,5 @@ Route::view('/admin/{path?}', 'app')
 
 Route::view('/{path}', 'app')
     ->middleware(['auth', 'institution.context', 'permission:institution.access'])
-    ->where('path', '(?:dashboard|students|teachers|academics|academic-sessions|classes|courses|subjects|attendance|examinations|results|accounting|fee-structures|invoices|fee-collection|payments|expenses|salary-management|financial-reports|notices|documents|users|settings|profile)(?:/.*)?')
+    ->where('path', '(?:dashboard|accountant|teacher|students|teachers|staff|academics|academic-sessions|classes|sections|courses|subjects|timetable|attendance|examinations|results|marks|accounting|fee-structures|bill-settings|invoices|fee-collection|payments|outstanding-fees|expenses|salary-management|financial-reports|notices|documents|users|roles|reports|settings|profile)(?:/.*)?')
     ->name('institution.app');

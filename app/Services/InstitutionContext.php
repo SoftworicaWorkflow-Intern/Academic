@@ -19,6 +19,11 @@ class InstitutionContext
         return $this->institution ?? throw new LogicException('No institution context is active.');
     }
 
+    public function id(): ?int
+    {
+        return $this->institution?->getKey();
+    }
+
     public function clear(): void
     {
         $this->institution = null;

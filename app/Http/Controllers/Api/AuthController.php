@@ -140,11 +140,7 @@ class AuthController extends Controller
             'roles' => $roles,
             'permissions' => $permissions,
             'audience' => $audience,
-            'redirect_to' => match ($audience) {
-                'platform' => '/admin/dashboard',
-                'institution' => '/dashboard',
-                default => null,
-            },
+            'redirect_to' => $this->redirectFor($audience, $roles),
             'institution' => $institution === null ? null : [
                 'id' => $institution->getKey(),
                 'name' => $institution->name,
@@ -152,5 +148,35 @@ class AuthController extends Controller
                 'type' => $institution->type,
             ],
         ];
+    }
+
+    /**
+     * @param  list<string>  $roles
+     */
+    private function redirectFor(?string $audience, array $roles): ?string
+    {
+        if ($audience === 'platform') {
+            return '/admin/dashboard';
+        }
+
+        if ($audience !== 'institution') {
+            return null;
+        }
+
+        $has = fn (string $role): bool => in_array($role, $roles, true);
+
+        if ($has('institution-admin') || $has('academic-staff') || $has('institution-staff')) {
+            return '/dashboard';
+        }
+
+        if ($has('accountant') || $has('cashier')) {
+            return '/accountant/dashboard';
+        }
+
+        if ($has('teacher')) {
+            return '/teacher/dashboard';
+        }
+
+        return '/dashboard';
     }
 }

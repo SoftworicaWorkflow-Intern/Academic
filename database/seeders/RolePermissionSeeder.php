@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Institution;
+use App\Services\ProvisionInstitutionRoles;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -11,55 +12,48 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (['platform.access', 'institution.access'] as $permissionName) {
+        $provision = app(ProvisionInstitutionRoles::class);
+        $names = array_merge(
+            ['platform.access'],
+            array_unique(array_merge(...array_values($provision->definitions()))),
+        );
+
+        foreach ($names as $permissionName) {
             Permission::firstOrCreate([
                 'name' => $permissionName,
                 'guard_name' => 'web',
             ]);
         }
 
-        $platformRoles = [
-            'platform-super-admin' => ['platform.access'],
-            'it-administrator' => ['platform.access'],
-            'it-support-staff' => ['platform.access'],
-        ];
-        $institutionRoles = [
-            'institution-admin' => ['institution.access'],
-            'accountant' => ['institution.access'],
-            'cashier' => ['institution.access'],
-            'teacher' => ['institution.access'],
-            'academic-staff' => ['institution.access'],
-            'institution-staff' => ['institution.access'],
-        ];
-
-        $this->ensureRoles((int) config('permission.platform_team_id'), $platformRoles);
+        $this->ensurePlatformRoles();
 
         foreach (Institution::query()->cursor() as $institution) {
-            $this->ensureRoles($institution->getKey(), $institutionRoles);
+            $provision->handle($institution);
         }
 
         setPermissionsTeamId(null);
     }
 
-    /**
-     * @param  array<string, list<string>>  $roles
-     */
-    private function ensureRoles(int $teamId, array $roles): void
+    private function ensurePlatformRoles(): void
     {
-        setPermissionsTeamId($teamId);
+        setPermissionsTeamId((int) config('permission.platform_team_id'));
 
-        foreach ($roles as $roleName => $permissions) {
+        foreach ([
+            'platform-super-admin' => ['platform.access'],
+            'it-administrator' => ['platform.access'],
+            'it-support-staff' => ['platform.access'],
+        ] as $roleName => $permissions) {
             $role = Role::query()
                 ->where('name', $roleName)
                 ->where('guard_name', 'web')
-                ->where('institution_id', $teamId)
+                ->where('institution_id', (int) config('permission.platform_team_id'))
                 ->first();
 
             if ($role === null) {
                 $role = Role::create([
                     'name' => $roleName,
                     'guard_name' => 'web',
-                    'institution_id' => $teamId,
+                    'institution_id' => (int) config('permission.platform_team_id'),
                 ]);
             }
 
