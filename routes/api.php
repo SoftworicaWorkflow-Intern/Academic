@@ -101,7 +101,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
             Route::middleware('permission:academics.manage')->group(function (): void {
                 Route::get('/sessions', [WorkspaceController::class, 'sessions']);
+                Route::get('/academic-sessions', [AcademicRecordController::class, 'sessions']);
                 Route::post('/sessions', [WorkspaceController::class, 'storeSession']);
+                Route::post('/academic-sessions', [AcademicRecordController::class, 'storeSession']);
+                Route::patch('/academic-sessions/{academicSession}', [AcademicRecordController::class, 'updateSession'])->whereNumber('academicSession');
+                Route::post('/academic-sessions/{academicSession}/archive', [AcademicRecordController::class, 'archiveSession'])->whereNumber('academicSession');
+                Route::post('/academic-sessions/{academicSession}/set-current', [AcademicRecordController::class, 'setCurrentSession'])->whereNumber('academicSession');
                 Route::post('/classes', [WorkspaceController::class, 'storeClass']);
                 Route::patch('/classes/{schoolClass}', [AcademicRecordController::class, 'updateClass'])->whereNumber('schoolClass');
                 Route::delete('/classes/{schoolClass}', [AcademicRecordController::class, 'destroyClass'])->whereNumber('schoolClass');
@@ -111,17 +116,35 @@ Route::middleware('auth:sanctum')->group(function (): void {
                 Route::post('/subjects', [WorkspaceController::class, 'storeSubject']);
                 Route::patch('/subjects/{subject}', [AcademicRecordController::class, 'updateSubject'])->whereNumber('subject');
                 Route::post('/class-subjects', [AcademicRecordController::class, 'assignSubject']);
+
+                Route::get('/timetable-periods', [AcademicRecordController::class, 'timetablePeriods']);
+                Route::post('/timetable-periods', [AcademicRecordController::class, 'storeTimetablePeriod']);
+                Route::patch('/timetable-periods/{timetablePeriod}', [AcademicRecordController::class, 'updateTimetablePeriod'])->whereNumber('timetablePeriod');
+                Route::delete('/timetable-periods/{timetablePeriod}', [AcademicRecordController::class, 'destroyTimetablePeriod'])->whereNumber('timetablePeriod');
+                Route::get('/timetable-entries', [AcademicRecordController::class, 'timetableEntries']);
+                Route::post('/timetable-entries', [AcademicRecordController::class, 'storeTimetableEntry']);
+                Route::patch('/timetable-entries/{timetableEntry}', [AcademicRecordController::class, 'updateTimetableEntry'])->whereNumber('timetableEntry');
+                Route::delete('/timetable-entries/{timetableEntry}', [AcademicRecordController::class, 'destroyTimetableEntry'])->whereNumber('timetableEntry');
+
+                Route::get('/grading-scales', [AcademicRecordController::class, 'gradingScales']);
+                Route::post('/grading-scales', [AcademicRecordController::class, 'storeGradingScale']);
+                Route::patch('/grading-scales/{gradingScale}', [AcademicRecordController::class, 'updateGradingScale'])->whereNumber('gradingScale');
+                Route::delete('/grading-scales/{gradingScale}', [AcademicRecordController::class, 'destroyGradingScale'])->whereNumber('gradingScale');
             });
 
             Route::middleware('permission:marks.enter')->group(function (): void {
                 Route::get('/examinations', [AcademicRecordController::class, 'examinations']);
                 Route::post('/examinations', [AcademicRecordController::class, 'storeExamination']);
+                Route::get('/examinations/{examination}/subjects', [AcademicRecordController::class, 'examinationSubjects'])->whereNumber('examination');
+                Route::post('/examinations/{examination}/subjects', [AcademicRecordController::class, 'storeExaminationSubject'])->whereNumber('examination');
+                Route::delete('/examination-subjects/{examinationSubject}', [AcademicRecordController::class, 'destroyExaminationSubject'])->whereNumber('examinationSubject');
                 Route::post('/examinations/{examination}/marks', [AcademicRecordController::class, 'storeMarks'])->whereNumber('examination');
                 Route::get('/examinations/{examination}/results', [AcademicRecordController::class, 'results'])->whereNumber('examination');
             });
 
             Route::middleware('permission:marks.publish')->group(function (): void {
                 Route::post('/examinations/{examination}/publish', [AcademicRecordController::class, 'publish'])->whereNumber('examination');
+                Route::post('/examinations/{examination}/workflow', [AcademicRecordController::class, 'markWorkflow'])->whereNumber('examination');
             });
 
             Route::middleware('permission:attendance.manage')->group(function (): void {

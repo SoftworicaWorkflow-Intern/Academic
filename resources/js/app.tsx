@@ -28,7 +28,6 @@ import {
 } from 'react-router-dom';
 import { api, getErrorMessage, type AuthUser } from './api';
 import {
-    AcademicsPage,
     AccountantPage,
     AttendancePage,
     BillSettingsPage,
@@ -38,7 +37,6 @@ import {
     InstitutionHome,
     InstitutionList,
     InvoicesPage,
-    MarksPage,
     NoticesPage,
     PaymentsPage,
     PlansPage,
@@ -50,6 +48,7 @@ import {
     publishAuth,
 } from './workspace';
 import { StaffPage } from './staff-page';
+import { AcademicSessionsPage, ClassesSectionsPage, SubjectsPage, TimetablePage, ExaminationsPage, MarksResultsPage } from './academic-modules';
 import { PendingPage, RecordPage } from './records';
 
 interface AuthContextValue {
@@ -171,12 +170,12 @@ function App() {
                         <Route path="/students/create" element={<StudentsPage />} />
                         <Route path="/teachers" element={<TeachersPage />} />
                         <Route path="/staff" element={<StaffPage />} />
-                        <Route path="/academics" element={<AcademicsPage />} />
-                        <Route path="/classes" element={<AcademicsPage />} />
-                        <Route path="/subjects" element={<AcademicsPage />} />
-                        <Route path="/academic-sessions" element={<AcademicsPage />} />
-                        <Route path="/sections" element={<AcademicsPage />} />
-                        <Route path="/timetable" element={<PendingPage title="Timetable" detail="Class and subject assignments exist. A period-by-period timetable is not stored yet." />} />
+                        <Route path="/academics" element={<AcademicSessionsPage />} />
+                        <Route path="/academic-sessions" element={<AcademicSessionsPage />} />
+                        <Route path="/classes" element={<ClassesSectionsPage />} />
+                        <Route path="/sections" element={<ClassesSectionsPage />} />
+                        <Route path="/subjects" element={<SubjectsPage />} />
+                        <Route path="/timetable" element={<TimetablePage />} />
                         <Route path="/attendance" element={<AttendancePage />} />
                         <Route path="/attendance/students" element={<AttendancePage />} />
                         <Route path="/attendance/teachers" element={<PendingPage title="Teacher attendance" detail="Student attendance is recorded today. Teacher attendance records are not stored yet." />} />
@@ -196,9 +195,9 @@ function App() {
                         <Route path="/reports" element={<InstitutionHome />} />
                         <Route path="/bill-settings" element={<BillSettingsPage />} />
                         <Route path="/accountant/dashboard" element={<AccountantPage />} />
-                        <Route path="/teacher/dashboard" element={<MarksPage />} />
-                        <Route path="/marks" element={<MarksPage />} />
-                        <Route path="/examinations" element={<MarksPage />} />
+                        <Route path="/teacher/dashboard" element={<MarksResultsPage />} />
+                        <Route path="/marks" element={<MarksResultsPage />} />
+                        <Route path="/examinations" element={<ExaminationsPage />} />
                         <Route path="/settings" element={<SettingsPage />} />
                         <Route path="/profile" element={<SettingsPage />} />
                     </Route>

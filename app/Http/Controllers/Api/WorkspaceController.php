@@ -209,8 +209,13 @@ class WorkspaceController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
+            'code' => ['nullable', 'string', 'max:30'],
             'starts_on' => ['required', 'date'],
-            'ends_on' => ['required', 'date', 'after:starts_on'],
+            'registration_starts_on' => ['nullable', 'date'],
+            'registration_ends_on' => ['nullable', 'date', 'after_or_equal:registration_starts_on'],
+            'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
+            'description' => ['nullable', 'string'],
+            'status' => ['nullable', 'string', 'max:30'],
             'is_current' => ['boolean'],
         ]);
 
@@ -231,13 +236,16 @@ class WorkspaceController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'code' => ['nullable', 'string', 'max:20'],
+            'level' => ['nullable', 'string', 'max:50'],
+            'academic_session_id' => ['nullable', 'integer'],
+            'teacher_id' => ['nullable', 'integer'],
+            'description' => ['nullable', 'string'],
+            'default_capacity' => ['nullable', 'integer', 'min:0'],
+            'status' => ['nullable', 'string', 'max:30'],
             'section' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $class = SchoolClass::query()->create([
-            'name' => $validated['name'],
-            'code' => $validated['code'] ?? null,
-        ]);
+        $class = SchoolClass::query()->create(collect($validated)->except('section')->all());
 
         if (! empty($validated['section'])) {
             Section::query()->create([
@@ -259,6 +267,15 @@ class WorkspaceController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'code' => ['required', 'string', 'max:20'],
+            'description' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'max:50'],
+            'subject_type' => ['nullable', 'string', 'max:30'],
+            'credit_hours' => ['nullable', 'integer', 'min:0'],
+            'full_marks' => ['nullable', 'integer', 'min:0'],
+            'pass_marks' => ['nullable', 'integer', 'min:0'],
+            'practical_full_marks' => ['nullable', 'integer', 'min:0'],
+            'practical_pass_marks' => ['nullable', 'integer', 'min:0'],
+            'status' => ['nullable', 'string', 'max:30'],
         ]);
 
         return response()->json(['data' => Subject::query()->create($validated)], 201);

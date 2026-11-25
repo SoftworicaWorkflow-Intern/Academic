@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'subject_id',
     'academic_session_id',
     'teacher_id',
+    'applicable_section_ids',
     'full_marks',
     'pass_marks',
     'practical_full_marks',
@@ -22,6 +23,11 @@ class ClassSubject extends Model
 {
     use BelongsToInstitution;
 
+    protected function casts(): array
+    {
+        return ['applicable_section_ids' => 'array'];
+    }
+
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
@@ -30,5 +36,10 @@ class ClassSubject extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(Teacher::class);
+    }
+
+    public function schoolClass(): BelongsTo
+    {
+        return $this->belongsTo(SchoolClass::class);
     }
 }
