@@ -478,7 +478,7 @@ class AcademicRecordController extends Controller
     public function sessions(Request $request): JsonResponse
     {
         $sessions = AcademicSession::query()
-            ->withCount('studentEnrollments')
+            ->withCount(['studentEnrollments', 'schoolClasses'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->filled('search'), fn ($q) => $q->where(function ($qq) use ($request): void {
                 $s = $request->string('search')->toString();

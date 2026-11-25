@@ -1,5 +1,29 @@
 import React, { useEffect, useState } from "react";
-import { api } from "./api";
+import { api as http } from "./api";
+
+function toInstitution(path: string): string {
+  if (path.startsWith("/api/")) {
+    return path;
+  }
+  return `/api/institution${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+const api = {
+  get: (path: string, config?: object) => http.get(toInstitution(path), config),
+  post: (path: string, data?: unknown, config?: object) => http.post(toInstitution(path), data, config),
+  patch: (path: string, data?: unknown, config?: object) => http.patch(toInstitution(path), data, config),
+  delete: (path: string, config?: object) => http.delete(toInstitution(path), config),
+};
+
+function asRows(payload: unknown): AnyRow[] {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload && typeof payload === "object" && Array.isArray((payload as { data?: unknown }).data)) {
+    return (payload as { data: AnyRow[] }).data;
+  }
+  return [];
+}
 
 type AnyRow = Record<string, any>;
 
@@ -11,7 +35,7 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) { return <inp
 function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) { return <select {...props} className={`${inputCls} ${props.className ?? ""}`} />; }
 function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) { return <textarea {...props} className={`${inputCls} ${props.className ?? ""}`} />; }
 function Btn({ children, tone = "primary", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { tone?: "primary" | "ghost" | "danger" }) {
-  const cls = tone === "primary" ? "bg-sky-600 text-white hover:bg-sky-700" : tone === "danger" ? "bg-rose-600 text-white hover:bg-rose-700" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50";
+  const cls = tone === "primary" ? "bg-blue-700 text-white hover:bg-blue-800" : tone === "danger" ? "bg-rose-600 text-white hover:bg-rose-700" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50";
   return <button {...props} className={`rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50 ${cls} ${props.className ?? ""}`}>{children}</button>;
 }
 function Modal({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
@@ -39,18 +63,17 @@ export function AcademicSessionsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AnyRow | null>(null);
   const [form, setForm] = useState<any>({ name: "", code: "", starts_on: "", ends_on: "", registration_starts_on: "", registration_ends_on: "", description: "", status: "active", is_current: false });
-  const load = async () => { setLoading(true); try { const res = await api.get("/academic-sessions"); setRows(res.data.data ?? res.data ?? []); } catch (e: any) { setMsg(errMsg(e)); } finally { setLoading(false); } };
+  const load = async () => { setLoading(true); try { const res = await api.get("/academic-sessions", { params: { per_page: 100 } }); setRows(asRows(res.data)); } catch (e: any) { setMsg(errMsg(e)); } finally { setLoading(false); } };
   useEffect(() => { load(); }, []);
   const openNew = () => { setEditing(null); setForm({ name: "", code: "", starts_on: "", ends_on: "", registration_starts_on: "", registration_ends_on: "", description: "", status: "active", is_current: false }); setOpen(true); };
   const openEdit = (r: AnyRow) => { setEditing(r); setForm({ name: r.name ?? "", code: r.code ?? "", starts_on: r.starts_on?.slice(0,10) ?? "", ends_on: r.ends_on?.slice(0,10) ?? "", registration_starts_on: r.registration_starts_on?.slice(0,10) ?? "", registration_ends_on: r.registration_ends_on?.slice(0,10) ?? "", description: r.description ?? "", status: r.status ?? "active", is_current: !!r.is_current }); setOpen(true); };
   const save = async () => { setMsg(""); try { if (editing) await api.patch(`/academic-sessions/${editing.id}`, form); else await api.post("/academic-sessions", form); setOpen(false); await load(); } catch (e: any) { setMsg(errMsg(e)); } };
   const act = async (fn: () => Promise<any>) => { setMsg(""); try { await fn(); await load(); } catch (e: any) { setMsg(errMsg(e)); } };
-  const current = rows.find(r => r.is_current);
-  return <Page title="Academic Sessions" subtitle="Create and manage academic years, set current session, and archive old sessions." action={<Btn onClick={openNew}>Add Session</Btn>}>
+  return <Page title="Academic Sessions" subtitle="Create and manage academic years, set the current session, and archive old sessions." action={<Btn onClick={openNew}>+ Add Academic Session</Btn>}>
     {msg && <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{msg}</div>}
-    <div className="grid gap-3 sm:grid-cols-3"><Stat label="Total Sessions" value={rows.length} /><Stat label="Current Session" value={current?.name ?? "None"} /><Stat label="Archived" value={rows.filter(r => r.status === "archived").length} /></div>
-    <Card title="Session List">{loading ? <div className="text-sm text-slate-500">Loading...</div> : <Table cols={["Name","Code","Start","End","Registration","Status","Current","Actions"]} rows={rows.map(r => [
-      r.name, r.code || "-", r.starts_on?.slice(0,10) || "-", r.ends_on?.slice(0,10) || "-", `${r.registration_starts_on?.slice(0,10) || "-"} to ${r.registration_ends_on?.slice(0,10) || "-"}`, <span className={`rounded-full px-2 py-1 text-xs ${r.status==="active"?"bg-emerald-50 text-emerald-700":r.status==="archived"?"bg-slate-100 text-slate-700":"bg-amber-50 text-amber-700"}`}>{r.status}</span>, r.is_current ? "Yes" : "No",
+    <div className="grid gap-3 sm:grid-cols-4"><Stat label="Total Academic Sessions" value={rows.length} /><Stat label="Active Sessions" value={rows.filter(r => r.status === "active" || r.is_current).length} /><Stat label="Upcoming Sessions" value={rows.filter(r => r.status === "upcoming").length} /><Stat label="Completed Sessions" value={rows.filter(r => r.status === "completed" || r.status === "archived").length} /></div>
+    <Card title="Academic Sessions">{loading ? <div className="text-sm text-slate-500">Loading...</div> : <Table cols={["Session Name","Start Date","End Date","Total Classes","Total Students","Status","Actions"]} rows={rows.map(r => [
+      r.name, r.starts_on?.slice(0,10) || "-", r.ends_on?.slice(0,10) || "-", String(r.school_classes_count ?? 0), String(r.student_enrollments_count ?? 0), <span className={`rounded-full px-2 py-1 text-xs ${r.is_current || r.status==="active"?"bg-emerald-50 text-emerald-700":r.status==="archived"||r.status==="completed"?"bg-slate-100 text-slate-700":"bg-amber-50 text-amber-700"}`}>{r.is_current ? "Current" : r.status}</span>,
       <div className="flex flex-wrap gap-2"><Btn tone="ghost" onClick={() => openEdit(r)}>Edit</Btn>{!r.is_current && r.status!=="archived" && <Btn tone="ghost" onClick={() => act(() => api.post(`/academic-sessions/${r.id}/set-current`))}>Set Current</Btn>}{r.status!=="archived" && <Btn tone="danger" onClick={() => act(() => api.post(`/academic-sessions/${r.id}/archive`))}>Archive</Btn>}</div>
     ])} />}</Card>
     <Modal open={open} title={editing ? "Edit Academic Session" : "Add Academic Session"} onClose={() => setOpen(false)}>
@@ -84,7 +107,7 @@ export function ClassesSectionsPage() {
   const load = async () => {
     try {
       const [c,s,t,e] = await Promise.all([api.get("/classes"), api.get("/academic-sessions"), api.get("/teachers?per_page=100"), api.get("/student-enrollments",{params:{academic_session_id:filter.academic_session_id||undefined, school_class_id:filter.school_class_id||undefined}})]);
-      setClasses(c.data.data ?? c.data ?? []); setSessions(s.data.data ?? s.data ?? []); setTeachers(t.data.data ?? t.data ?? []); setEnrollments(e.data.data ?? e.data ?? []);
+      setClasses(asRows(c.data)); setSessions(asRows(s.data)); setTeachers(asRows(t.data)); setEnrollments(asRows(e.data));
     } catch (e:any) { setMsg(errMsg(e)); }
   };
   useEffect(() => { load(); }, [filter.academic_session_id, filter.school_class_id]);
@@ -93,7 +116,7 @@ export function ClassesSectionsPage() {
   const del = async (url:string) => { if(!confirm("Delete this record?")) return; try { await api.delete(url); load(); } catch(e:any){ setMsg(errMsg(e)); } };
   return <Page title="Classes & Sections" subtitle="Manage classes, sections, capacity, class teachers, and student enrollment records." action={<div className="flex gap-2"><Btn tone="ghost" onClick={()=>{setEditingClass(null); setClassForm({name:"",code:"",academic_session_id:"",level_order:"",description:"",status:"active"}); setClassOpen(true);}}>Add Class</Btn><Btn onClick={()=>{setEditingSection(null); setSectionForm({school_class_id:"",academic_session_id:"",name:"",code:"",capacity:"",teacher_id:"",room_number:"",status:"active"}); setSectionOpen(true);}}>Add Section</Btn></div>}>
     {msg && <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{msg}</div>}
-    <div className="grid gap-3 sm:grid-cols-4"><Stat label="Classes" value={classes.length} /><Stat label="Sections" value={classes.reduce((a,c)=>a+(c.sections?.length||0),0)} /><Stat label="Active Classes" value={classes.filter(c=>c.status==="active").length} /><Stat label="Enrollments" value={enrollments.length} /></div>
+    <div className="grid gap-3 sm:grid-cols-4"><Stat label="Total Classes" value={classes.length} /><Stat label="Active Classes" value={classes.filter(c=>c.status==="active").length} /><Stat label="Total Sections" value={classes.reduce((a,c)=>a+(c.sections?.length||0),0)} /><Stat label="Total Enrolled Students" value={enrollments.length} /></div>
     <Card title="Filters"><div className="grid gap-3 md:grid-cols-3"><Field label="Academic Session"><Select value={filter.academic_session_id} onChange={e=>setFilter({...filter,academic_session_id:e.target.value})}><option value="">All</option>{sessions.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field><Field label="Class"><Select value={filter.school_class_id} onChange={e=>setFilter({...filter,school_class_id:e.target.value})}><option value="">All</option>{classes.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</Select></Field><div className="flex items-end"><Btn tone="ghost" onClick={()=>setFilter({academic_session_id:"",school_class_id:""})}>Reset</Btn></div></div></Card>
     <Card title="Classes"><Table cols={["Name","Code","Session","Sections","Capacity","Status","Actions"]} rows={classes.map(c=>[c.name,c.code||"-",c.academic_session?.name||"-",String(c.sections?.length||0),String(c.sections?.reduce((a:any,s:any)=>a+(s.capacity||0),0)||0),c.status||"active",<div className="flex flex-wrap gap-2"><Btn tone="ghost" onClick={()=>{setEditingClass(c); setClassForm({name:c.name||"",code:c.code||"",academic_session_id:c.academic_session_id||"",level_order:c.level_order??"",description:c.description||"",status:c.status||"active"}); setClassOpen(true);}}>Edit</Btn><Btn tone="danger" onClick={()=>del(`/classes/${c.id}`)}>Delete</Btn></div>])} /></Card>
     <Card title="Sections"><Table cols={["Section","Class","Session","Teacher","Room","Capacity","Status","Actions"]} rows={classes.flatMap((c:any)=>(c.sections||[]).map((s:any)=>[s.name,c.name,c.academic_session?.name||sessions.find(x=>x.id===s.academic_session_id)?.name||"-",s.class_teacher?.user?.name||"-",s.room_number||"-",s.capacity??"-",s.status||"active",<div className="flex flex-wrap gap-2"><Btn tone="ghost" onClick={()=>{setEditingSection(s); setSectionForm({school_class_id:s.school_class_id,academic_session_id:s.academic_session_id||"",name:s.name||"",code:s.code||"",capacity:s.capacity??"",teacher_id:s.teacher_id||"",room_number:s.room_number||"",status:s.status||"active"}); setSectionOpen(true);}}>Edit</Btn><Btn tone="danger" onClick={()=>del(`/sections/${s.id}`)}>Delete</Btn></div>]))} /></Card>
@@ -129,7 +152,7 @@ export function SubjectsPage() {
   const [editing,setEditing]=useState<AnyRow|null>(null);
   const [form,setForm]=useState<any>({name:"",code:"",description:"",category:"",subject_type:"compulsory",credit_hours:"",full_marks:100,pass_marks:40,practical_full_marks:0,practical_pass_marks:0,status:"active"});
   const [assign,setAssign]=useState<any>({school_class_id:"",subject_id:"",academic_session_id:"",teacher_id:"",full_marks:100,pass_marks:40,practical_full_marks:0,practical_pass_marks:0});
-  const load = async () => { try { const [s,c,se,t,a]=await Promise.all([api.get("/subjects"),api.get("/classes"),api.get("/academic-sessions"),api.get("/teachers?per_page=100"),api.get("/class-subjects")]); setSubjects(s.data.data??s.data??[]); setClasses(c.data.data??c.data??[]); setSessions(se.data.data??se.data??[]); setTeachers(t.data.data??t.data??[]); setAssignments(a.data.data??a.data??[]); } catch(e:any){ setMsg(errMsg(e)); } };
+  const load = async () => { try { const [s,c,se,t,a]=await Promise.all([api.get("/subjects"),api.get("/classes"),api.get("/academic-sessions"),api.get("/teachers?per_page=100"),api.get("/class-subjects")]); setSubjects(asRows(s.data)); setClasses(asRows(c.data)); setSessions(asRows(se.data)); setTeachers(asRows(t.data)); setAssignments(asRows(a.data)); } catch(e:any){ setMsg(errMsg(e)); } };
   useEffect(()=>{load();},[]);
   const save = async ()=>{ try { const payload={...form, credit_hours:form.credit_hours===""?null:Number(form.credit_hours)}; editing?await api.patch(`/subjects/${editing.id}`,payload):await api.post("/subjects",payload); setOpen(false); load(); } catch(e:any){ setMsg(errMsg(e)); } };
   const saveAssign = async ()=>{ try { await api.post("/class-subjects",{...assign, teacher_id:assign.teacher_id||null, academic_session_id:assign.academic_session_id||null}); setAssignOpen(false); load(); } catch(e:any){ setMsg(errMsg(e)); } };
@@ -173,7 +196,7 @@ export function TimetablePage() {
   const load = async () => {
     try {
       const [c,se,s,sub,t,p,e] = await Promise.all([api.get("/classes"),api.get("/sections"),api.get("/academic-sessions"),api.get("/subjects"),api.get("/teachers?per_page=100"),api.get("/timetable-periods"),api.get("/timetable-entries",{params:filter})]);
-      setClasses(c.data.data??c.data??[]); setSections(se.data.data??se.data??[]); setSessions(s.data.data??s.data??[]); setSubjects(sub.data.data??sub.data??[]); setTeachers(t.data.data??t.data??[]); setPeriods(p.data.data??p.data??[]); setEntries(e.data.data??e.data??[]);
+      setClasses(asRows(c.data)); setSections(asRows(se.data)); setSessions(asRows(s.data)); setSubjects(asRows(sub.data)); setTeachers(asRows(t.data)); setPeriods(asRows(p.data)); setEntries(asRows(e.data));
     } catch(e:any){ setMsg(errMsg(e)); }
   };
   useEffect(()=>{load();},[filter.school_class_id,filter.section_id,filter.academic_session_id]);
@@ -210,8 +233,8 @@ export function ExaminationsPage() {
   const [editing,setEditing]=useState<AnyRow|null>(null);
   const [form,setForm]=useState<any>({name:"",code:"",exam_type:"terminal",school_class_id:"",academic_session_id:"",description:"",starts_on:"",ends_on:"",result_publication_on:"",status:"draft"});
   const [sched,setSched]=useState<any>({subject_id:"",exam_date:"",starts_at:"",ends_at:"",full_marks:100,pass_marks:40,practical_full_marks:0,practical_pass_marks:0,room_number:""});
-  const load = async () => { try { const [e,c,s,sub]=await Promise.all([api.get("/examinations"),api.get("/classes"),api.get("/academic-sessions"),api.get("/subjects")]); setExams(e.data.data??e.data??[]); setClasses(c.data.data??c.data??[]); setSessions(s.data.data??s.data??[]); setSubjects(sub.data.data??sub.data??[]); } catch(e:any){ setMsg(errMsg(e)); } };
-  const loadSched = async (id:number|string)=>{ if(!id){setExamSubjects([]); return;} try { const r=await api.get(`/examinations/${id}/subjects`); setExamSubjects(r.data.data??r.data??[]);} catch(e:any){setMsg(errMsg(e));}};
+  const load = async () => { try { const [e,c,s,sub]=await Promise.all([api.get("/examinations"),api.get("/classes"),api.get("/academic-sessions"),api.get("/subjects")]); setExams(asRows(e.data)); setClasses(asRows(c.data)); setSessions(asRows(s.data)); setSubjects(asRows(sub.data)); } catch(e:any){ setMsg(errMsg(e)); } };
+  const loadSched = async (id:number|string)=>{ if(!id){setExamSubjects([]); return;} try { const r=await api.get(`/examinations/${id}/subjects`); setExamSubjects(asRows(r.data));} catch(e:any){setMsg(errMsg(e));}};
   useEffect(()=>{load();},[]); useEffect(()=>{loadSched(selectedExam);},[selectedExam]);
   const save = async ()=>{ try { const payload={...form, academic_session_id:form.academic_session_id||null}; editing?await api.patch(`/examinations/${editing.id}`,payload):await api.post("/examinations",payload); setOpen(false); load(); } catch(e:any){ setMsg(errMsg(e)); } };
   const saveSched = async ()=>{ if(!selectedExam) return; try { await api.post(`/examinations/${selectedExam}/subjects`, {...sched, exam_date:sched.exam_date||null, starts_at:sched.starts_at||null, ends_at:sched.ends_at||null}); setSchedOpen(false); loadSched(selectedExam); } catch(e:any){ setMsg(errMsg(e)); } };
@@ -255,10 +278,10 @@ export function MarksResultsPage() {
   const [rows,setRows]=useState<AnyRow[]>([]);
   const [scaleForm,setScaleForm]=useState<any>({name:"",is_default:false,items:[{grade:"A+",min_marks:80,max_marks:100,gpa:4,remarks:"Excellent"},{grade:"A",min_marks:70,max_marks:79,gpa:3.6,remarks:"Very Good"},{grade:"B",min_marks:60,max_marks:69,gpa:3.2,remarks:"Good"},{grade:"C",min_marks:50,max_marks:59,gpa:2.8,remarks:"Satisfactory"},{grade:"D",min_marks:40,max_marks:49,gpa:2.4,remarks:"Pass"},{grade:"F",min_marks:0,max_marks:39,gpa:0,remarks:"Fail"}]});
   const [scaleOpen,setScaleOpen]=useState(false);
-  const loadBase = async ()=>{ try { const [e,c,sec,sub,sc]=await Promise.all([api.get("/examinations"),api.get("/classes"),api.get("/sections"),api.get("/subjects"),api.get("/grading-scales")]); setExams(e.data.data??e.data??[]); setClasses(c.data.data??c.data??[]); setSections(sec.data.data??sec.data??[]); setSubjects(sub.data.data??sub.data??[]); setScales(sc.data.data??sc.data??[]);} catch(e:any){setMsg(errMsg(e));}};
+  const loadBase = async ()=>{ try { const [e,c,sec,sub,sc]=await Promise.all([api.get("/examinations"),api.get("/classes"),api.get("/sections"),api.get("/subjects"),api.get("/grading-scales")]); setExams(asRows(e.data)); setClasses(asRows(c.data)); setSections(asRows(sec.data)); setSubjects(asRows(sub.data)); setScales(asRows(sc.data));} catch(e:any){setMsg(errMsg(e));}};
   useEffect(()=>{loadBase();},[]);
-  useEffect(()=>{ const loadStudents=async()=>{ if(!sel.school_class_id){setStudents([]); setRows([]); return;} try { const r=await api.get(`/classes/${sel.school_class_id}/students`); const list=r.data.data??r.data??[]; const filtered = sel.section_id ? list.filter((s:any)=>String(s.section_id)===String(sel.section_id)) : list; setStudents(filtered); setRows(filtered.map((s:any)=>({student_id:s.id, theory_marks:"", practical_marks:"", remarks:""}))); } catch(e:any){setMsg(errMsg(e));}}; loadStudents(); },[sel.school_class_id,sel.section_id]);
-  const loadResults = async ()=>{ if(!sel.examination_id) return; try { const r=await api.get(`/examinations/${sel.examination_id}/results`); setResults(r.data.data??r.data??[]);} catch(e:any){setMsg(errMsg(e));}};
+  useEffect(()=>{ const loadStudents=async()=>{ if(!sel.school_class_id){setStudents([]); setRows([]); return;} try { const r=await api.get(`/classes/${sel.school_class_id}/students`); const list=asRows(r.data); const filtered = sel.section_id ? list.filter((s:any)=>String(s.section_id)===String(sel.section_id)) : list; setStudents(filtered); setRows(filtered.map((s:any)=>({student_id:s.id, theory_marks:"", practical_marks:"", remarks:""}))); } catch(e:any){setMsg(errMsg(e));}}; loadStudents(); },[sel.school_class_id,sel.section_id]);
+  const loadResults = async ()=>{ if(!sel.examination_id) return; try { const r=await api.get(`/examinations/${sel.examination_id}/results`); setResults(asRows(r.data.data ?? r.data));} catch(e:any){setMsg(errMsg(e));}};
   useEffect(()=>{ if(sel.examination_id) loadResults(); },[sel.examination_id]);
   const saveMarks = async ()=>{ if(!sel.examination_id||!sel.subject_id) { setMsg("Select exam and subject."); return; } try { await api.post(`/examinations/${sel.examination_id}/marks`, { subject_id:Number(sel.subject_id), marks: rows.map(r=>({student_id:r.student_id, theory_marks:r.theory_marks===""?null:Number(r.theory_marks), practical_marks:r.practical_marks===""?null:Number(r.practical_marks), remarks:r.remarks||null})) }); setMsg("Marks saved as draft."); loadResults(); } catch(e:any){ setMsg(errMsg(e)); } };
   const workflow = async (action:string)=>{ if(!sel.examination_id) return; try { await api.post(`/examinations/${sel.examination_id}/workflow`,{action}); setMsg(`Marks ${action} successful.`); loadResults(); } catch(e:any){ setMsg(errMsg(e)); } };

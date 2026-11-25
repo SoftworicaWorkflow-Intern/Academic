@@ -27,4 +27,9 @@ class AcademicSession extends Model
     {
         return $this->hasMany(StudentEnrollment::class);
     }
+
+    public function schoolClasses(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SchoolClass::class);
+    }
 }
