@@ -111,11 +111,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
                 Route::patch('/classes/{schoolClass}', [AcademicRecordController::class, 'updateClass'])->whereNumber('schoolClass');
                 Route::delete('/classes/{schoolClass}', [AcademicRecordController::class, 'destroyClass'])->whereNumber('schoolClass');
                 Route::post('/sections', [AcademicRecordController::class, 'storeSection']);
+                Route::patch('/sections/{section}', [AcademicRecordController::class, 'updateSection'])->whereNumber('section');
+                Route::delete('/sections/{section}', [AcademicRecordController::class, 'destroySection'])->whereNumber('section');
                 Route::get('/classes/{schoolClass}/students', [AcademicRecordController::class, 'classStudents'])->whereNumber('schoolClass');
                 Route::patch('/students/{student}/enrollment', [AcademicRecordController::class, 'enroll'])->whereNumber('student');
+                Route::get('/student-enrollments', [AcademicRecordController::class, 'studentEnrollments']);
                 Route::post('/subjects', [WorkspaceController::class, 'storeSubject']);
                 Route::patch('/subjects/{subject}', [AcademicRecordController::class, 'updateSubject'])->whereNumber('subject');
+                Route::delete('/subjects/{subject}', [AcademicRecordController::class, 'destroySubject'])->whereNumber('subject');
+                Route::get('/class-subjects', [AcademicRecordController::class, 'classSubjects']);
                 Route::post('/class-subjects', [AcademicRecordController::class, 'assignSubject']);
+                Route::delete('/class-subjects/{classSubject}', [AcademicRecordController::class, 'destroyClassSubject'])->whereNumber('classSubject');
 
                 Route::get('/timetable-periods', [AcademicRecordController::class, 'timetablePeriods']);
                 Route::post('/timetable-periods', [AcademicRecordController::class, 'storeTimetablePeriod']);
@@ -135,6 +141,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::middleware('permission:marks.enter')->group(function (): void {
                 Route::get('/examinations', [AcademicRecordController::class, 'examinations']);
                 Route::post('/examinations', [AcademicRecordController::class, 'storeExamination']);
+                Route::patch('/examinations/{examination}', [AcademicRecordController::class, 'updateExamination'])->whereNumber('examination');
+                Route::delete('/examinations/{examination}', [AcademicRecordController::class, 'destroyExamination'])->whereNumber('examination');
                 Route::get('/examinations/{examination}/subjects', [AcademicRecordController::class, 'examinationSubjects'])->whereNumber('examination');
                 Route::post('/examinations/{examination}/subjects', [AcademicRecordController::class, 'storeExaminationSubject'])->whereNumber('examination');
                 Route::delete('/examination-subjects/{examinationSubject}', [AcademicRecordController::class, 'destroyExaminationSubject'])->whereNumber('examinationSubject');

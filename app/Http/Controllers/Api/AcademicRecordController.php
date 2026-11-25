@@ -61,14 +61,46 @@ class AcademicRecordController extends Controller
     {
         $validated = $request->validate([
             'school_class_id' => ['required', 'integer'],
-            'name' => ['required', 'string', 'max:20'],
+            'academic_session_id' => ['nullable', 'integer'],
+            'name' => ['required', 'string', 'max:50'],
+            'code' => ['nullable', 'string', 'max:20'],
             'capacity' => ['nullable', 'integer', 'min:1'],
             'teacher_id' => ['nullable', 'integer'],
+            'room_number' => ['nullable', 'string', 'max:50'],
+            'status' => ['nullable', Rule::in(['active', 'inactive'])],
         ]);
         SchoolClass::query()->findOrFail($validated['school_class_id']);
+        $this->assertSession($validated['academic_session_id'] ?? null);
         $this->assertTeacher($validated['teacher_id'] ?? null);
 
-        return response()->json(['data' => Section::query()->create($validated)], 201);
+        return response()->json(['data' => Section::query()->create($validated)->load(['schoolClass', 'classTeacher.user'])], 201);
+    }
+
+    public function updateSection(Request $request, int $section): JsonResponse
+    {
+        $record = Section::query()->findOrFail($section);
+        $validated = $request->validate([
+            'school_class_id' => ['required', 'integer'],
+            'academic_session_id' => ['nullable', 'integer'],
+            'name' => ['required', 'string', 'max:50'],
+            'code' => ['nullable', 'string', 'max:20'],
+            'capacity' => ['nullable', 'integer', 'min:1'],
+            'teacher_id' => ['nullable', 'integer'],
+            'room_number' => ['nullable', 'string', 'max:50'],
+            'status' => ['nullable', Rule::in(['active', 'inactive'])],
+        ]);
+        SchoolClass::query()->findOrFail($validated['school_class_id']);
+        $this->assertSession($validated['academic_session_id'] ?? null);
+        $this->assertTeacher($validated['teacher_id'] ?? null);
+        $record->update($validated);
+
+        return response()->json(['data' => $record->fresh(['schoolClass', 'classTeacher.user'])]);
+    }
+
+    public function destroySection(int $section): JsonResponse
+    {
+        Section::query()->findOrFail($section)->delete();
+        return response()->json(['message' => 'Section deleted.']);
     }
 
     public function updateSubject(Request $request, int $subject): JsonResponse
@@ -77,15 +109,36 @@ class AcademicRecordController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'code' => ['required', 'string', 'max:20'],
-            'subject_type' => ['required', Rule::in(['compulsory', 'optional'])],
+            'description' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'max:50'],
+            'subject_type' => ['required', Rule::in(['compulsory', 'optional', 'theory', 'practical', 'both'])],
+            'credit_hours' => ['nullable', 'integer', 'min:0'],
             'full_marks' => ['required', 'integer', 'min:1'],
             'pass_marks' => ['required', 'integer', 'min:0'],
             'practical_full_marks' => ['nullable', 'integer', 'min:0'],
             'practical_pass_marks' => ['nullable', 'integer', 'min:0'],
+            'status' => ['nullable', Rule::in(['active', 'inactive'])],
         ]);
         $record->update($validated);
 
         return response()->json(['data' => $record]);
+    }
+
+    public function destroySubject(int $subject): JsonResponse
+    {
+        Subject::query()->findOrFail($subject)->delete();
+        return response()->json(['message' => 'Subject deleted.']);
+    }
+
+    public function classSubjects(Request $request): JsonResponse
+    {
+        $rows = ClassSubject::query()
+            ->with(['subject', 'teacher.user', 'schoolClass'])
+            ->when($request->filled('school_class_id'), fn ($q) => $q->where('school_class_id', $request->integer('school_class_id')))
+            ->when($request->filled('academic_session_id'), fn ($q) => $q->where('academic_session_id', $request->integer('academic_session_id')))
+            ->get();
+
+        return response()->json(['data' => $rows]);
     }
 
     public function assignSubject(Request $request): JsonResponse
@@ -95,6 +148,8 @@ class AcademicRecordController extends Controller
             'subject_id' => ['required', 'integer'],
             'academic_session_id' => ['nullable', 'integer'],
             'teacher_id' => ['nullable', 'integer'],
+            'applicable_section_ids' => ['nullable', 'array'],
+            'applicable_section_ids.*' => ['integer'],
             'full_marks' => ['required', 'integer', 'min:1'],
             'pass_marks' => ['required', 'integer', 'min:0', 'lte:full_marks'],
             'practical_full_marks' => ['nullable', 'integer', 'min:0'],
@@ -114,7 +169,13 @@ class AcademicRecordController extends Controller
             $validated,
         );
 
-        return response()->json(['data' => $assignment->load(['subject', 'teacher'])]);
+        return response()->json(['data' => $assignment->load(['subject', 'teacher.user', 'schoolClass'])]);
+    }
+
+    public function destroyClassSubject(int $classSubject): JsonResponse
+    {
+        ClassSubject::query()->findOrFail($classSubject)->delete();
+        return response()->json(['message' => 'Class subject removed.']);
     }
 
     public function classStudents(int $schoolClass): JsonResponse
@@ -133,29 +194,57 @@ class AcademicRecordController extends Controller
             'school_class_id' => ['required', 'integer'],
             'section_id' => ['nullable', 'integer'],
             'roll_number' => ['nullable', 'string', 'max:50'],
+            'academic_session_id' => ['nullable', 'integer'],
+            'status' => ['nullable', Rule::in(['active', 'promoted', 'completed', 'dropped'])],
         ]);
         SchoolClass::query()->findOrFail($validated['school_class_id']);
+        $this->assertSession($validated['academic_session_id'] ?? null);
 
         if (! empty($validated['section_id'])) {
             $section = Section::query()->findOrFail($validated['section_id']);
             if ($section->school_class_id !== (int) $validated['school_class_id']) {
-                throw ValidationException::withMessages([
-                    'section_id' => 'This section does not belong to the selected class.',
-                ]);
+                throw ValidationException::withMessages(['section_id' => 'This section does not belong to the selected class.']);
             }
             if ($section->capacity !== null) {
                 $count = Student::query()->where('section_id', $section->getKey())->whereKeyNot($record->getKey())->count();
                 if ($count >= $section->capacity) {
-                    throw ValidationException::withMessages([
-                        'section_id' => 'This section is at capacity.',
-                    ]);
+                    throw ValidationException::withMessages(['section_id' => 'This section is at capacity.']);
                 }
             }
         }
 
-        $record->update($validated);
+        $sessionId = $validated['academic_session_id'] ?? $record->academic_session_id;
+        DB::transaction(function () use ($record, $validated, $sessionId): void {
+            $record->update(collect($validated)->only(['school_class_id', 'section_id', 'roll_number', 'academic_session_id'])->all());
+            if ($sessionId) {
+                StudentEnrollment::query()->updateOrCreate(
+                    ['student_id' => $record->getKey(), 'academic_session_id' => $sessionId],
+                    [
+                        'school_class_id' => $validated['school_class_id'],
+                        'section_id' => $validated['section_id'] ?? null,
+                        'roll_number' => $validated['roll_number'] ?? null,
+                        'status' => $validated['status'] ?? 'active',
+                        'enrolled_at' => now(),
+                    ]
+                );
+            }
+        });
 
-        return response()->json(['data' => $record->load('schoolClass')]);
+        return response()->json(['data' => $record->fresh(['schoolClass', 'section', 'academicSession'])]);
+    }
+
+    public function studentEnrollments(Request $request): JsonResponse
+    {
+        $rows = StudentEnrollment::query()
+            ->with(['student', 'academicSession', 'schoolClass', 'section'])
+            ->when($request->filled('academic_session_id'), fn ($q) => $q->where('academic_session_id', $request->integer('academic_session_id')))
+            ->when($request->filled('school_class_id'), fn ($q) => $q->where('school_class_id', $request->integer('school_class_id')))
+            ->when($request->filled('section_id'), fn ($q) => $q->where('section_id', $request->integer('section_id')))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->orderByDesc('id')
+            ->paginate($request->integer('per_page', 15));
+
+        return response()->json($rows);
     }
 
     public function feeCategories(): JsonResponse
@@ -239,7 +328,36 @@ class AcademicRecordController extends Controller
 
     public function storeExamination(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $validated = $this->examinationRules($request);
+        SchoolClass::query()->findOrFail($validated['school_class_id']);
+        $this->assertSession($validated['academic_session_id'] ?? null);
+
+        return response()->json(['data' => Examination::query()->create($validated)->load('schoolClass')], 201);
+    }
+
+    public function updateExamination(Request $request, int $examination): JsonResponse
+    {
+        $exam = Examination::query()->findOrFail($examination);
+        $validated = $this->examinationRules($request);
+        SchoolClass::query()->findOrFail($validated['school_class_id']);
+        $this->assertSession($validated['academic_session_id'] ?? null);
+        $exam->update($validated);
+
+        return response()->json(['data' => $exam->fresh('schoolClass')]);
+    }
+
+    public function destroyExamination(int $examination): JsonResponse
+    {
+        Examination::query()->findOrFail($examination)->delete();
+        return response()->json(['message' => 'Examination deleted.']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function examinationRules(Request $request): array
+    {
+        return $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'code' => ['nullable', 'string', 'max:30'],
             'exam_type' => ['required', Rule::in(['terminal', 'midterm', 'final', 'practical', 'unit_test', 'board'])],
@@ -251,10 +369,6 @@ class AcademicRecordController extends Controller
             'result_publication_on' => ['nullable', 'date'],
             'status' => ['nullable', 'string', 'max:30'],
         ]);
-        SchoolClass::query()->findOrFail($validated['school_class_id']);
-        $this->assertSession($validated['academic_session_id'] ?? null);
-
-        return response()->json(['data' => Examination::query()->create($validated)], 201);
     }
 
     public function storeMarks(Request $request, int $examination, MarkCalculator $calculator): JsonResponse
