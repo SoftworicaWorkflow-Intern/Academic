@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AcademicRecordController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\FeeController;
 use App\Http\Controllers\Api\InstitutionController;
 use App\Http\Controllers\Api\PasswordController;
 use App\Http\Controllers\Api\Staff\StaffAttendanceController;
@@ -163,18 +164,36 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::middleware('permission:finance.manage|finance.collect')->group(function (): void {
                 Route::get('/invoices', [WorkspaceController::class, 'invoices']);
                 Route::get('/payments', [WorkspaceController::class, 'payments']);
+                Route::get('/fee-structures', [FeeController::class, 'structures']);
+                Route::get('/fee-structures/{feeStructure}', [FeeController::class, 'showStructure'])->whereNumber('feeStructure');
+                Route::get('/payment-methods', [FeeController::class, 'paymentMethods']);
             });
 
             Route::middleware('permission:finance.manage')->group(function (): void {
-                Route::get('/fee-structures', [WorkspaceController::class, 'feeStructures']);
-                Route::post('/fee-structures', [WorkspaceController::class, 'storeFeeStructure']);
-                Route::get('/fee-categories', [AcademicRecordController::class, 'feeCategories']);
-                Route::post('/fee-categories', [AcademicRecordController::class, 'storeFeeCategory']);
-                Route::patch('/fee-categories/{feeCategory}', [AcademicRecordController::class, 'updateFeeCategory'])->whereNumber('feeCategory');
-                Route::get('/scholarships', [AcademicRecordController::class, 'scholarships']);
-                Route::post('/scholarships', [AcademicRecordController::class, 'storeScholarship']);
-                Route::get('/payment-methods', [AcademicRecordController::class, 'paymentMethods']);
-                Route::patch('/payment-methods/{paymentMethod}', [AcademicRecordController::class, 'updatePaymentMethod'])->whereNumber('paymentMethod');
+                Route::get('/fee-summary', [FeeController::class, 'summary']);
+
+                Route::get('/fee-categories', [FeeController::class, 'categories']);
+                Route::post('/fee-categories', [FeeController::class, 'storeCategory']);
+                Route::get('/fee-categories/{feeCategory}', [FeeController::class, 'showCategory'])->whereNumber('feeCategory');
+                Route::match(['put', 'patch'], '/fee-categories/{feeCategory}', [FeeController::class, 'updateCategory'])->whereNumber('feeCategory');
+                Route::delete('/fee-categories/{feeCategory}', [FeeController::class, 'destroyCategory'])->whereNumber('feeCategory');
+
+                Route::post('/fee-structures', [FeeController::class, 'storeStructure']);
+                Route::match(['put', 'patch'], '/fee-structures/{feeStructure}', [FeeController::class, 'updateStructure'])->whereNumber('feeStructure');
+                Route::delete('/fee-structures/{feeStructure}', [FeeController::class, 'destroyStructure'])->whereNumber('feeStructure');
+
+                Route::get('/scholarships', [FeeController::class, 'scholarships']);
+                Route::post('/scholarships', [FeeController::class, 'storeScholarship']);
+                Route::match(['put', 'patch'], '/scholarships/{scholarship}', [FeeController::class, 'updateScholarship'])->whereNumber('scholarship');
+                Route::delete('/scholarships/{scholarship}', [FeeController::class, 'destroyScholarship'])->whereNumber('scholarship');
+
+                Route::get('/late-fee-settings', [FeeController::class, 'lateFeeSettings']);
+                Route::match(['post', 'put', 'patch'], '/late-fee-settings', [FeeController::class, 'updateLateFeeSettings']);
+
+                Route::post('/payment-methods', [FeeController::class, 'storePaymentMethod']);
+                Route::match(['put', 'patch'], '/payment-methods/{paymentMethod}', [FeeController::class, 'updatePaymentMethod'])->whereNumber('paymentMethod');
+                Route::delete('/payment-methods/{paymentMethod}', [FeeController::class, 'destroyPaymentMethod'])->whereNumber('paymentMethod');
+
                 Route::post('/fee-plans', [AcademicRecordController::class, 'storeFeePlan']);
                 Route::post('/invoices', [WorkspaceController::class, 'storeInvoice']);
                 Route::get('/ledger', [WorkspaceController::class, 'ledger']);

@@ -33,6 +33,14 @@ class Invoice extends Model
     }
 
     /**
+     * @return BelongsTo<FeeStructure, $this>
+     */
+    public function feeStructure(): BelongsTo
+    {
+        return $this->belongsTo(FeeStructure::class);
+    }
+
+    /**
      * @return HasMany<Payment, $this>
      */
     public function payments(): HasMany

@@ -81,11 +81,18 @@ class CreateInstitution
                 ]);
             }
 
-            foreach ([['Cash', 'cash'], ['Bank transfer', 'bank'], ['Digital payment', 'online']] as [$name, $code]) {
+            foreach ([
+                ['Cash', 'cash', 'Pay cash directly at the accounts office.'],
+                ['Bank transfer', 'bank', 'Transfer to official school bank account.'],
+                ['eSewa', 'esewa', 'Pay using eSewa QR or Merchant ID.'],
+                ['Khalti', 'khalti', 'Pay using Khalti digital wallet or QR.'],
+                ['Digital payment', 'online', 'Online payment gateway.'],
+            ] as [$name, $code, $instructions]) {
                 \App\Models\PaymentMethod::query()->create([
                     'institution_id' => $institution->getKey(),
                     'name' => $name,
                     'code' => $code,
+                    'instructions' => $instructions,
                     'enabled' => true,
                 ]);
             }

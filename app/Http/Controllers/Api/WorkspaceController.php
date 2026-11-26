@@ -332,7 +332,13 @@ class WorkspaceController extends Controller
     public function invoices(): JsonResponse
     {
         return response()->json(
-            Invoice::query()->with('student:id,first_name,last_name,admission_number')->latest()->paginate(15),
+            Invoice::query()
+                ->with([
+                    'student:id,first_name,last_name,admission_number',
+                    'feeStructure:id,name,amount,fee_type,payment_schedule',
+                ])
+                ->latest()
+                ->paginate(15),
         );
     }
 
@@ -343,6 +349,8 @@ class WorkspaceController extends Controller
             'amount' => ['required', 'integer', 'min:1'],
             'issued_on' => ['required', 'date'],
             'due_on' => ['required', 'date', 'after_or_equal:issued_on'],
+            'fee_structure_id' => ['nullable', 'integer', 'exists:fee_structures,id'],
+            'description' => ['nullable', 'string', 'max:255'],
         ]);
 
         $actor = $request->user();
@@ -354,10 +362,19 @@ class WorkspaceController extends Controller
     public function storePayment(Request $request, int $invoice, FinanceService $finance): JsonResponse
     {
         $invoiceModel = Invoice::query()->findOrFail($invoice);
+
+        $allowedMethods = \App\Models\PaymentMethod::query()
+            ->where('enabled', true)
+            ->pluck('code')
+            ->push('cash', 'bank', 'online', 'esewa', 'khalti')
+            ->unique()
+            ->values()
+            ->all();
+
         $validated = $request->validate([
             'amount' => ['required', 'integer', 'min:1'],
             'paid_on' => ['required', 'date'],
-            'method' => ['required', Rule::in(['cash', 'bank', 'online'])],
+            'method' => ['required', 'string', Rule::in($allowedMethods)],
         ]);
 
         $actor = $request->user();

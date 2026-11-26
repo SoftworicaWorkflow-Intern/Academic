@@ -1,4 +1,4 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 import {
     createContext,
     type FormEvent,
@@ -27,6 +27,7 @@ import {
     useNavigate,
 } from 'react-router-dom';
 import { api, getErrorMessage, type AuthUser } from './api';
+import { FeeManagementPage } from './fee-management-page';
 import {
     AccountantPage,
     AttendancePage,
@@ -181,19 +182,17 @@ function App() {
                         <Route path="/attendance/teachers" element={<PendingPage title="Teacher attendance" detail="Student attendance is recorded today. Teacher attendance records are not stored yet." />} />
                         <Route path="/attendance/reports" element={<RecordPage title="Attendance reports" detail="Recent student attendance for this institution." url="/api/institution/attendance" />} />
                         <Route path="/invoices" element={<InvoicesPage />} />
-                        <Route path="/fee-structures" element={<InvoicesPage />} />
+                        <Route path="/fee-structures" element={<FeeManagementPage />} />
                         <Route path="/payments" element={<PaymentsPage />} />
                         <Route path="/fee-collection" element={<PaymentsPage />} />
                         <Route path="/outstanding-fees" element={<InvoicesPage />} />
-                        <Route path="/accounting/transactions" element={<RecordPage title="Income and expenses" detail="Posted journal entries for this institution." url="/api/institution/ledger" />} />
-                        <Route path="/accounting/cashbook" element={<RecordPage title="Cashbook and bank" detail="Journal lines posted to cash and bank." url="/api/institution/ledger" />} />
                         <Route path="/accounting/reports" element={<AccountantPage />} />
                         <Route path="/notices" element={<NoticesPage />} />
                         <Route path="/documents" element={<PendingPage title="Documents" detail="Document storage for this institution is not enabled yet." />} />
                         <Route path="/users" element={<RecordPage title="User management" detail="People who can sign in to this institution." url="/api/institution/users" />} />
                         <Route path="/roles" element={<RecordPage title="Roles and permissions" detail="Roles configured for this institution." url="/api/institution/roles" />} />
                         <Route path="/reports" element={<InstitutionHome />} />
-                        <Route path="/bill-settings" element={<BillSettingsPage />} />
+                        <Route path="/bill-settings" element={<FeeManagementPage />} />
                         <Route path="/accountant/dashboard" element={<AccountantPage />} />
                         <Route path="/teacher/dashboard" element={<MarksResultsPage />} />
                         <Route path="/marks" element={<MarksResultsPage />} />

@@ -18,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 class FinanceService
 {
     /**
-     * @param  array{student_id: int, amount: int, issued_on: string, due_on: string}  $data
+     * @param  array{student_id: int, amount: int, issued_on: string, due_on: string, fee_structure_id?: ?int, description?: ?string}  $data
      */
     public function issueInvoice(array $data, User $actor): Invoice
     {
@@ -29,6 +29,8 @@ class FinanceService
             $invoice = Invoice::query()->create([
                 'institution_id' => $institutionId,
                 'student_id' => $student->getKey(),
+                'fee_structure_id' => $data['fee_structure_id'] ?? null,
+                'description' => $data['description'] ?? null,
                 'number' => $this->nextNumber(Invoice::class, 'number', 'INV'),
                 'issued_on' => $data['issued_on'],
                 'due_on' => $data['due_on'],
@@ -37,13 +39,13 @@ class FinanceService
                 'status' => 'open',
             ]);
 
-            $entry = $this->entry($institutionId, $data['issued_on'], $invoice->number, 'Student fee invoice');
+            $entry = $this->entry($institutionId, $data['issued_on'], $invoice->number, $data['description'] ?? 'Student fee invoice');
             $this->line($entry, $this->account($institutionId, '1100'), $data['amount'], 0);
             $this->line($entry, $this->account($institutionId, '4000'), 0, $data['amount']);
 
             $this->audit($actor, 'invoice.issued', $invoice);
 
-            return $invoice->load('student');
+            return $invoice->load(['student', 'feeStructure']);
         });
     }
 

@@ -1,4 +1,4 @@
-﻿import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     Bar,
@@ -98,13 +98,11 @@ const institutionNav: NavGroup[] = [
         { label: 'Attendance Reports', to: '/attendance/reports', permission: 'attendance.manage' },
     ] },
     { label: 'Accounting & Finance', icon: Wallet, items: [
-        { label: 'Bill Settings', to: '/bill-settings', permission: 'finance.manage' },
+        { label: 'Fee Structures & Rules', to: '/fee-structures', permission: 'finance.manage' },
         { label: 'Invoices', to: '/invoices', permission: 'finance.manage' },
         { label: 'Payments', to: '/payments', any: ['finance.manage', 'finance.collect'] },
         { label: 'Fee Collection', to: '/fee-collection', any: ['finance.manage', 'finance.collect'] },
         { label: 'Outstanding Fees', to: '/outstanding-fees', any: ['finance.manage', 'finance.collect'] },
-        { label: 'Income & Expenses', to: '/accounting/transactions', permission: 'finance.manage' },
-        { label: 'Cashbook & Bank', to: '/accounting/cashbook', permission: 'finance.manage' },
         { label: 'Financial Reports', to: '/accounting/reports', permission: 'finance.manage' },
     ] },
     { label: 'Communication', icon: Bell, items: [
@@ -680,16 +678,48 @@ interface InvoiceRow {
 export function InvoicesPage() {
     const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
     const [students, setStudents] = useState<StudentRow[]>([]);
+    const [feeStructures, setFeeStructures] = useState<Array<{ id: number; name: string; amount: number; due_day: number | null; due_date: string | null }>>([]);
+    const [selectedStructureId, setSelectedStructureId] = useState<string>('');
+    const [amount, setAmount] = useState<string>('');
+    const [description, setDescription] = useState<string>('');
+    const [issuedOn, setIssuedOn] = useState<string>(() => new Date().toISOString().slice(0, 10));
+    const [dueOn, setDueOn] = useState<string>(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 15);
+        return d.toISOString().slice(0, 10);
+    });
     const [error, setError] = useState<string | null>(null);
 
     function load() {
         api.get<{ data: InvoiceRow[] }>('/api/institution/invoices').then(({ data }) => setInvoices(data.data));
         api.get<{ data: StudentRow[] }>('/api/institution/students').then(({ data }) => setStudents(data.data));
+        api.get<{ data: Array<{ id: number; name: string; amount: number; due_day: number | null; due_date: string | null }> }>('/api/institution/fee-structures?per_page=100')
+            .then(({ data }) => setFeeStructures(data.data ?? []))
+            .catch(() => {});
     }
 
     useEffect(() => {
         load();
     }, []);
+
+    function handleStructureChange(id: string) {
+        setSelectedStructureId(id);
+        const match = feeStructures.find((s) => String(s.id) === id);
+        if (match) {
+            setAmount(String(match.amount));
+            setDescription(match.name);
+            if (match.due_date) {
+                setDueOn(match.due_date.slice(0, 10));
+            } else if (match.due_day) {
+                const now = new Date();
+                const d = new Date(now.getFullYear(), now.getMonth(), match.due_day);
+                if (d < now) {
+                    d.setMonth(d.getMonth() + 1);
+                }
+                setDueOn(d.toISOString().slice(0, 10));
+            }
+        }
+    }
 
     async function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -699,9 +729,16 @@ export function InvoicesPage() {
             await api.post('/api/institution/invoices', {
                 ...payload,
                 student_id: Number(payload.student_id),
-                amount: Number(payload.amount),
+                fee_structure_id: selectedStructureId ? Number(selectedStructureId) : null,
+                description: description || null,
+                amount: Number(amount || payload.amount),
+                issued_on: issuedOn,
+                due_on: dueOn,
             });
             form.reset();
+            setSelectedStructureId('');
+            setAmount('');
+            setDescription('');
             load();
         } catch (reason: unknown) {
             setError(getErrorMessage(reason, 'Unable to issue the invoice.'));
@@ -713,22 +750,89 @@ export function InvoicesPage() {
             <PageTitle title="Invoices" detail="Issuing an invoice posts a receivable and fee income. Amounts are in NPR." />
             {error && <p className="mb-3 text-sm text-rose-700">{error}</p>}
             <Panel>
-                <form onSubmit={submit} className="grid gap-3 md:grid-cols-4">
-                    <select name="student_id" required className={inputClass}>
-                        <option value="">Student</option>
-                        {students.map((student) => <option key={student.id} value={student.id}>{student.first_name} {student.last_name}</option>)}
-                    </select>
-                    <input name="amount" type="number" min={1} required placeholder="Amount" className={inputClass} />
-                    <input name="issued_on" type="date" required className={inputClass} />
-                    <input name="due_on" type="date" required className={inputClass} />
-                    <button className="h-11 rounded-xl bg-blue-700 text-sm font-semibold text-white">Issue invoice</button>
+                <form onSubmit={submit} className="space-y-3">
+                    <div className="grid gap-3 md:grid-cols-3">
+                        <select
+                            value={selectedStructureId}
+                            onChange={(e) => handleStructureChange(e.target.value)}
+                            className={inputClass}
+                        >
+                            <option value="">Apply Fee Structure (Optional)</option>
+                            {feeStructures.map((structure) => (
+                                <option key={structure.id} value={structure.id}>
+                                    {structure.name} (NPR {structure.amount.toLocaleString()})
+                                </option>
+                            ))}
+                        </select>
+
+                        <select name="student_id" required className={inputClass}>
+                            <option value="">Select Student *</option>
+                            {students.map((student) => (
+                                <option key={student.id} value={student.id}>
+                                    {student.first_name} {student.last_name} ({student.admission_number})
+                                </option>
+                            ))}
+                        </select>
+
+                        <input
+                            name="amount"
+                            type="number"
+                            min={1}
+                            required
+                            placeholder="Amount (NPR) *"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            className={inputClass}
+                        />
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-4">
+                        <input
+                            name="description"
+                            type="text"
+                            placeholder="Bill description / items note"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className={`md:col-span-2 ${inputClass}`}
+                        />
+                        <input
+                            name="issued_on"
+                            type="date"
+                            required
+                            value={issuedOn}
+                            onChange={(e) => setIssuedOn(e.target.value)}
+                            className={inputClass}
+                        />
+                        <input
+                            name="due_on"
+                            type="date"
+                            required
+                            value={dueOn}
+                            onChange={(e) => setDueOn(e.target.value)}
+                            className={inputClass}
+                        />
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                        <button className="h-11 rounded-xl bg-blue-700 px-6 text-sm font-semibold text-white hover:bg-blue-800">
+                            Issue invoice
+                        </button>
+                    </div>
                 </form>
             </Panel>
             <ul className="mt-4 divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white px-5">
-                {invoices.map((invoice) => (
+                {invoices.map((invoice: any) => (
                     <li key={invoice.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
-                        <span>{invoice.number} · {invoice.student?.first_name} {invoice.student?.last_name}</span>
-                        <span className="text-slate-500">NPR {invoice.amount.toLocaleString()} · paid {invoice.paid_amount.toLocaleString()} · {invoice.status}</span>
+                        <div>
+                            <span className="font-semibold text-slate-800">{invoice.number}</span>
+                            <span className="ml-2 text-slate-600">· {invoice.student?.first_name} {invoice.student?.last_name}</span>
+                            {invoice.fee_structure?.name && (
+                                <span className="ml-2 inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                                    {invoice.fee_structure.name}
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-slate-500">NPR {invoice.amount.toLocaleString()} · paid {invoice.paid_amount.toLocaleString()} · <span className={`font-medium ${invoice.status === 'paid' ? 'text-emerald-700' : 'text-amber-700'}`}>{invoice.status}</span></span>
                     </li>
                 ))}
             </ul>
@@ -738,11 +842,26 @@ export function InvoicesPage() {
 
 export function PaymentsPage() {
     const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+    const [paymentMethods, setPaymentMethods] = useState<Array<{ id: number; name: string; code: string; enabled: boolean; instructions?: string }>>([]);
+    const [selectedMethod, setSelectedMethod] = useState<string>('cash');
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
+    function loadInvoices() {
         api.get<{ data: InvoiceRow[] }>('/api/institution/invoices').then(({ data }) => setInvoices(data.data.filter((invoice) => invoice.status !== 'paid')));
+        api.get<{ data: Array<{ id: number; name: string; code: string; enabled: boolean; instructions?: string }> }>('/api/institution/payment-methods')
+            .then(({ data }) => {
+                const methods = (data.data ?? []).filter((m) => m.enabled);
+                setPaymentMethods(methods);
+                if (methods.length > 0 && !methods.some((m) => m.code === selectedMethod)) {
+                    setSelectedMethod(methods[0].code);
+                }
+            })
+            .catch(() => {});
+    }
+
+    useEffect(() => {
+        loadInvoices();
     }, []);
 
     async function submit(event: FormEvent<HTMLFormElement>) {
@@ -754,32 +873,70 @@ export function PaymentsPage() {
                 paid_on: payload.paid_on,
                 method: payload.method,
             });
-            setMessage('Receipt posted. Cash increased and the receivable decreased.');
+            setMessage('Receipt posted. Cash/Bank increased and the receivable decreased.');
             setError(null);
+            loadInvoices();
         } catch (reason: unknown) {
             setError(getErrorMessage(reason, 'Unable to collect this payment.'));
         }
     }
 
+    const currentMethodInfo = paymentMethods.find((m) => m.code === selectedMethod);
+
     return (
         <>
-            <PageTitle title="Fee collection" detail="Partial payments are allowed. Posted receipts are not edited in place." />
+            <PageTitle title="Fee collection" detail="Partial payments are allowed. Supports Cash, Bank, eSewa, Khalti, and digital methods." />
             {message && <p className="mb-3 text-sm text-emerald-700">{message}</p>}
             {error && <p className="mb-3 text-sm text-rose-700">{error}</p>}
             <Panel>
-                <form onSubmit={submit} className="grid gap-3 md:grid-cols-4">
-                    <select name="invoice_id" required className={inputClass}>
-                        <option value="">Open invoice</option>
-                        {invoices.map((invoice) => <option key={invoice.id} value={invoice.id}>{invoice.number} · due {invoice.amount - invoice.paid_amount}</option>)}
-                    </select>
-                    <input name="amount" type="number" min={1} required className={inputClass} />
-                    <input name="paid_on" type="date" required className={inputClass} />
-                    <select name="method" className={inputClass} defaultValue="cash">
-                        <option value="cash">Cash</option>
-                        <option value="bank">Bank</option>
-                        <option value="online">Online</option>
-                    </select>
-                    <button className="h-11 rounded-xl bg-blue-700 text-sm font-semibold text-white">Collect</button>
+                <form onSubmit={submit} className="space-y-3">
+                    <div className="grid gap-3 md:grid-cols-4">
+                        <select name="invoice_id" required className={inputClass}>
+                            <option value="">Select open invoice *</option>
+                            {invoices.map((invoice) => (
+                                <option key={invoice.id} value={invoice.id}>
+                                    {invoice.number} · due NPR {(invoice.amount - invoice.paid_amount).toLocaleString()}
+                                </option>
+                            ))}
+                        </select>
+                        <input name="amount" type="number" min={1} required placeholder="Amount (NPR) *" className={inputClass} />
+                        <input name="paid_on" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} className={inputClass} />
+                        <select
+                            name="method"
+                            className={inputClass}
+                            value={selectedMethod}
+                            onChange={(e) => setSelectedMethod(e.target.value)}
+                        >
+                            {paymentMethods.length > 0 ? (
+                                paymentMethods.map((m) => (
+                                    <option key={m.id} value={m.code}>
+                                        {m.name}
+                                    </option>
+                                ))
+                            ) : (
+                                <>
+                                    <option value="cash">Cash</option>
+                                    <option value="bank">Bank Transfer</option>
+                                    <option value="esewa">eSewa</option>
+                                    <option value="khalti">Khalti</option>
+                                    <option value="online">Online / Card</option>
+                                </>
+                            )}
+                        </select>
+                    </div>
+
+                    {currentMethodInfo?.instructions && (
+                        <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                            <span className="font-semibold text-slate-700">Payment Instruction: </span>
+                            {currentMethodInfo.instructions}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end pt-1">
+                        <button className="h-11 rounded-xl bg-blue-700 px-6 text-sm font-semibold text-white hover:bg-blue-800">
+                            Collect payment
+                        </button>
+                    </div>
                 </form>
             </Panel>
         </>
