@@ -165,10 +165,10 @@ function Shell({
         .filter((group) => group.items.length > 0);
 
     return (
-        <div className={`min-h-screen overflow-x-hidden bg-[#f4f6f8] text-slate-900 lg:grid ${collapsed ? 'lg:grid-cols-[76px_minmax(0,1fr)]' : 'lg:grid-cols-[272px_minmax(0,1fr)]'}`}>
+        <div className={`bg-[#f4f6f8] text-slate-900 lg:grid lg:h-screen lg:overflow-hidden ${collapsed ? 'lg:grid-cols-[76px_minmax(0,1fr)]' : 'lg:grid-cols-[272px_minmax(0,1fr)]'}`}>
             {open && <button className="fixed inset-0 z-30 bg-slate-950/40 lg:hidden" aria-label="Close navigation" onClick={() => setOpen(false)} />}
-            <aside className={`fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r border-slate-200 bg-[#f7f8fa] transition-transform lg:sticky lg:top-0 lg:h-screen lg:w-auto lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-4">
+            <aside className={`fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r border-slate-200 bg-[#f7f8fa] transition-transform lg:static lg:h-full lg:w-auto lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 px-4">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white"><GraduationCap className="size-4" /></span>
                     {!collapsed && (
                         <div className="min-w-0">
@@ -181,7 +181,7 @@ function Shell({
                     </button>
                     <button className="ml-auto lg:hidden" aria-label="Close navigation" onClick={() => setOpen(false)}><X className="size-4" /></button>
                 </div>
-                {!collapsed && <div className="px-3 py-3">
+                {!collapsed && <div className="shrink-0 px-3 py-3">
                     <div className="relative">
                         <Search className="pointer-events-none absolute left-3 top-2.5 size-4 text-slate-400" />
                         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a section" className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-500" />
@@ -189,7 +189,7 @@ function Shell({
                 </div>}
                 <AppSidebar groups={filtered} collapsed={collapsed} onNavigate={() => setOpen(false)} />
             </aside>
-            <div className="min-w-0">
+            <div className="flex min-w-0 flex-col lg:overflow-y-auto">
                 <TopNavbar user={user} onOpenMenu={() => setOpen(true)} onLogout={logout} />
                 <motion.main initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }} className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
                     {children}
