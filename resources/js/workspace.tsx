@@ -103,7 +103,7 @@ const institutionNav: NavGroup[] = [
         { label: 'Payments', to: '/payments', any: ['finance.manage', 'finance.collect'] },
         { label: 'Fee Collection', to: '/fee-collection', any: ['finance.manage', 'finance.collect'] },
         { label: 'Outstanding Fees', to: '/outstanding-fees', any: ['finance.manage', 'finance.collect'] },
-        { label: 'Financial Reports', to: '/accounting/reports', permission: 'finance.manage' },
+        { label: 'Financial Reports', to: '/financial-reports', permission: 'finance.manage' },
     ] },
     { label: 'Communication', icon: Bell, items: [
         { label: 'Notices', to: '/notices', permission: 'notices.manage' },

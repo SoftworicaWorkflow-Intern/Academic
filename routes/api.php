@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AcademicRecordController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FeeController;
+use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\InstitutionController;
 use App\Http\Controllers\Api\PasswordController;
 use App\Http\Controllers\Api\Staff\StaffAttendanceController;
@@ -162,15 +163,23 @@ Route::middleware('auth:sanctum')->group(function (): void {
             });
 
             Route::middleware('permission:finance.manage|finance.collect')->group(function (): void {
-                Route::get('/invoices', [WorkspaceController::class, 'invoices']);
-                Route::get('/payments', [WorkspaceController::class, 'payments']);
+                Route::get('/invoices', [FinanceController::class, 'invoices']);
+                Route::get('/invoices/{invoice}', [FinanceController::class, 'showInvoice'])->whereNumber('invoice');
+                Route::get('/payments', [FinanceController::class, 'payments']);
+                Route::get('/payments/{payment}', [FinanceController::class, 'showPayment'])->whereNumber('payment');
                 Route::get('/fee-structures', [FeeController::class, 'structures']);
                 Route::get('/fee-structures/{feeStructure}', [FeeController::class, 'showStructure'])->whereNumber('feeStructure');
                 Route::get('/payment-methods', [FeeController::class, 'paymentMethods']);
+                Route::get('/finance/lookups', [FinanceController::class, 'lookups']);
+                Route::get('/finance/students', [FinanceController::class, 'students']);
+                Route::get('/outstanding-fees', [FinanceController::class, 'outstanding']);
+                Route::post('/outstanding-fees/{invoice}/reminders', [FinanceController::class, 'sendReminder'])->whereNumber('invoice');
             });
 
             Route::middleware('permission:finance.manage')->group(function (): void {
                 Route::get('/fee-summary', [FeeController::class, 'summary']);
+                Route::get('/financial-reports', [FinanceController::class, 'reports']);
+                Route::get('/financial-reports/export', [FinanceController::class, 'exportReport']);
 
                 Route::get('/fee-categories', [FeeController::class, 'categories']);
                 Route::post('/fee-categories', [FeeController::class, 'storeCategory']);
@@ -195,14 +204,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
                 Route::delete('/payment-methods/{paymentMethod}', [FeeController::class, 'destroyPaymentMethod'])->whereNumber('paymentMethod');
 
                 Route::post('/fee-plans', [AcademicRecordController::class, 'storeFeePlan']);
-                Route::post('/invoices', [WorkspaceController::class, 'storeInvoice']);
+                Route::post('/invoices', [FinanceController::class, 'storeInvoice']);
+                Route::patch('/invoices/{invoice}', [FinanceController::class, 'updateInvoice'])->whereNumber('invoice');
+                Route::post('/invoices/{invoice}/cancel', [FinanceController::class, 'cancelInvoice'])->whereNumber('invoice');
                 Route::get('/ledger', [WorkspaceController::class, 'ledger']);
                 Route::post('/expenses', [WorkspaceController::class, 'storeExpense']);
-                Route::post('/payments/{payment}/reverse', [WorkspaceController::class, 'reversePayment'])->whereNumber('payment');
+                Route::post('/payments/{payment}/verify', [FinanceController::class, 'verifyPayment'])->whereNumber('payment');
+                Route::post('/payments/{payment}/reverse', [FinanceController::class, 'reversePayment'])->whereNumber('payment');
             });
 
             Route::middleware('permission:finance.collect')->group(function (): void {
-                Route::post('/invoices/{invoice}/payments', [WorkspaceController::class, 'storePayment'])->whereNumber('invoice');
+                Route::post('/invoices/{invoice}/payments', [FinanceController::class, 'storePayment'])->whereNumber('invoice');
             });
 
             Route::middleware('permission:notices.manage')->group(function (): void {

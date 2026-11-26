@@ -7,7 +7,21 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['institution_id', 'invoice_id', 'receipt_number', 'amount', 'paid_on', 'method', 'status', 'reversed_at', 'reversal_reason'])]
+#[Fillable([
+    'institution_id',
+    'invoice_id',
+    'receipt_number',
+    'amount',
+    'paid_on',
+    'method',
+    'transaction_id',
+    'idempotency_key',
+    'status',
+    'reversed_at',
+    'reversal_reason',
+    'verified_at',
+    'verified_by',
+])]
 class Payment extends Model
 {
     use BelongsToInstitution;
@@ -20,6 +34,7 @@ class Payment extends Model
         return [
             'paid_on' => 'date',
             'reversed_at' => 'datetime',
+            'verified_at' => 'datetime',
         ];
     }
 
@@ -29,5 +44,13 @@ class Payment extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function verifier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 }

@@ -29,17 +29,21 @@ import {
 import { api, getErrorMessage, type AuthUser } from './api';
 import { FeeManagementPage } from './fee-management-page';
 import {
+    FeeCollectionPage,
+    FinancialReportsPage,
+    InvoicesPage,
+    OutstandingFeesPage,
+    PaymentsPage,
+} from './finance-modules';
+import {
     AccountantPage,
     AttendancePage,
-    BillSettingsPage,
     InstitutionApp,
     InstitutionCreate,
     InstitutionDetail,
     InstitutionHome,
     InstitutionList,
-    InvoicesPage,
     NoticesPage,
-    PaymentsPage,
     PlansPage,
     PlatformApp,
     PlatformHome,
@@ -184,9 +188,10 @@ function App() {
                         <Route path="/invoices" element={<InvoicesPage />} />
                         <Route path="/fee-structures" element={<FeeManagementPage />} />
                         <Route path="/payments" element={<PaymentsPage />} />
-                        <Route path="/fee-collection" element={<PaymentsPage />} />
-                        <Route path="/outstanding-fees" element={<InvoicesPage />} />
-                        <Route path="/accounting/reports" element={<AccountantPage />} />
+                        <Route path="/fee-collection" element={<FeeCollectionPage />} />
+                        <Route path="/outstanding-fees" element={<OutstandingFeesPage />} />
+                        <Route path="/financial-reports" element={<FinancialReportsPage />} />
+                        <Route path="/accounting/reports" element={<FinancialReportsPage />} />
                         <Route path="/notices" element={<NoticesPage />} />
                         <Route path="/documents" element={<PendingPage title="Documents" detail="Document storage for this institution is not enabled yet." />} />
                         <Route path="/users" element={<RecordPage title="User management" detail="People who can sign in to this institution." url="/api/institution/users" />} />
