@@ -31,15 +31,11 @@ export function AppSidebar({
 
     useEffect(() => {
         const active = groups.filter((group) => group.items.some((item) => isActive(location.pathname, item.to, paths))).map((group) => group.label);
-        setOpenGroups((current) => {
-            const next = Array.from(new Set([...current, ...active]));
-
-            return next.length === current.length && next.every((label, index) => label === current[index]) ? current : next;
-        });
-    }, [location.pathname, groups, paths]);
+        setOpenGroups(active);
+    }, [location.pathname]);
 
     return (
-        <nav className="space-y-3 overflow-y-auto px-3 pb-6" aria-label="Sidebar">
+        <nav className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-6" aria-label="Sidebar">
             {groups.map((group) => {
                 const Icon = group.icon;
                 const expanded = openGroups.includes(group.label);
@@ -69,7 +65,7 @@ export function AppSidebar({
                             type="button"
                             aria-expanded={expanded}
                             title={collapsed ? group.label : undefined}
-                            onClick={() => setOpenGroups((current) => current.includes(group.label) ? current.filter((label) => label !== group.label) : [...current, group.label])}
+                            onClick={() => setOpenGroups((current) => current.includes(group.label) ? [] : [group.label])}
                             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium ${groupActive ? 'text-blue-800' : 'text-slate-700 hover:bg-slate-100'}`}
                         >
                             <Icon className="size-4 shrink-0" />

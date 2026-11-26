@@ -79,7 +79,7 @@ export function StudentsPage() {
     const [viewing, setViewing] = useState<number | null>(null);
     const [toast, setToast] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [visible, setVisible] = useState<string[]>([...columns]);
+    const [visible, setVisible] = useState<string[]>(['Photo', 'First name', 'Last name', 'Admission', 'Class', 'Section', 'Status', 'Actions']);
     const [classes, setClasses] = useState<Array<{ id: number; name: string; sections?: Array<{ id: number; name: string }> }>>([]);
     const [sessions, setSessions] = useState<Array<{ id: number; name: string }>>([]);
     const [menu, setMenu] = useState<number | null>(null);
@@ -163,10 +163,10 @@ export function StudentsPage() {
                 <button type="button" onClick={() => { setSearch(''); setFilters({ school_class_id: '', section_id: '', academic_session_id: '', gender: '', status: '' }); }} className="h-10 rounded-lg border border-slate-200 text-sm">Reset filters</button>
             </div>
             <details className="mb-3 text-sm text-slate-600">
-                <summary className="cursor-pointer">Show or hide columns</summary>
-                <div className="mt-2 flex flex-wrap gap-3">
+                <summary className="cursor-pointer font-medium text-slate-700">Columns</summary>
+                <div className="mt-2 flex flex-wrap gap-2">
                     {columns.map((column) => (
-                        <label key={column} className="inline-flex items-center gap-1">
+                        <label key={column} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5">
                             <input type="checkbox" checked={visible.includes(column)} onChange={() => setVisible((currentColumns) => currentColumns.includes(column) ? currentColumns.filter((item) => item !== column) : [...currentColumns, column])} />
                             {column}
                         </label>
@@ -174,31 +174,40 @@ export function StudentsPage() {
                 </div>
             </details>
             <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-                <table className="w-full min-w-[1100px] text-left text-sm">
-                    <thead className="sticky top-0 bg-slate-50 text-slate-500">
-                        <tr>{columns.filter((column) => visible.includes(column)).map((column) => <th key={column} className="px-3 py-3 font-medium">{column}</th>)}</tr>
+                <table className="w-full min-w-[720px] text-left text-sm">
+                    <thead className="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
+                        <tr>{columns.filter((column) => visible.includes(column) && !(column === 'Last name' && visible.includes('First name'))).map((column) => <th key={column} className="px-4 py-3 font-medium whitespace-nowrap">{column === 'First name' ? 'Student' : column}</th>)}</tr>
                     </thead>
                     <tbody>
+                        {(page?.data ?? []).length === 0 && (
+                            <tr>
+                                <td colSpan={Math.max(1, columns.filter((column) => visible.includes(column) && !(column === 'Last name' && visible.includes('First name'))).length)} className="px-4 py-10 text-center text-slate-500">No students match these filters.</td>
+                            </tr>
+                        )}
                         {(page?.data ?? []).map((student) => (
                             <tr key={student.id} className="border-t border-slate-100 hover:bg-slate-50">
-                                {visible.includes('Photo') && <td className="px-3 py-3">{student.photo_path ? <img alt="" src={`/api/institution/students/${student.id}/photo`} className="size-9 rounded-full object-cover" /> : <span className="flex size-9 items-center justify-center rounded-full bg-slate-100 text-xs">{student.first_name.slice(0, 1)}</span>}</td>}
-                                {visible.includes('Admission') && <td className="px-3 py-3">{student.admission_number}</td>}
-                                {visible.includes('First name') && <td className="px-3 py-3">{student.first_name}</td>}
-                                {visible.includes('Last name') && <td className="px-3 py-3">{student.last_name}</td>}
-                                {visible.includes('Guardian') && <td className="px-3 py-3">{student.guardian_name ?? '—'}</td>}
-                                {visible.includes('Guardian phone') && <td className="px-3 py-3">{student.guardian_phone ?? '—'}</td>}
-                                {visible.includes('Gender') && <td className="px-3 py-3 capitalize">{student.gender ?? '—'}</td>}
-                                {visible.includes('Date of birth') && <td className="px-3 py-3">{student.date_of_birth?.slice(0, 10) ?? '—'}</td>}
-                                {visible.includes('Class') && <td className="px-3 py-3">{student.school_class?.name ?? '—'}</td>}
-                                {visible.includes('Section') && <td className="px-3 py-3">{student.section?.name ?? '—'}</td>}
-                                {visible.includes('Session') && <td className="px-3 py-3">{student.academic_session?.name ?? '—'}</td>}
-                                {visible.includes('Admission date') && <td className="px-3 py-3">{student.admission_date?.slice(0, 10) ?? '—'}</td>}
-                                {visible.includes('Status') && <td className="px-3 py-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs capitalize">{student.status}</span></td>}
+                                {visible.includes('Photo') && <td className="px-4 py-3">{student.photo_path ? <img alt="" src={`/api/institution/students/${student.id}/photo`} className="size-9 rounded-full object-cover" /> : <span className="flex size-9 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-800">{student.first_name.slice(0, 1)}</span>}</td>}
+                                {visible.includes('First name') && (
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                        <p className="font-medium text-slate-900">{student.first_name} {student.last_name}</p>
+                                    </td>
+                                )}
+                                {visible.includes('Last name') && !visible.includes('First name') && <td className="px-4 py-3 whitespace-nowrap">{student.last_name}</td>}
+                                {visible.includes('Admission') && <td className="px-4 py-3 font-mono text-xs whitespace-nowrap text-slate-700">{student.admission_number}</td>}
+                                {visible.includes('Guardian') && <td className="px-4 py-3 whitespace-nowrap">{student.guardian_name ?? '—'}</td>}
+                                {visible.includes('Guardian phone') && <td className="px-4 py-3 whitespace-nowrap">{student.guardian_phone ?? '—'}</td>}
+                                {visible.includes('Gender') && <td className="px-4 py-3 capitalize whitespace-nowrap">{student.gender ?? '—'}</td>}
+                                {visible.includes('Date of birth') && <td className="px-4 py-3 whitespace-nowrap">{student.date_of_birth?.slice(0, 10) ?? '—'}</td>}
+                                {visible.includes('Class') && <td className="px-4 py-3 whitespace-nowrap">{student.school_class?.name ?? '—'}</td>}
+                                {visible.includes('Section') && <td className="px-4 py-3 whitespace-nowrap">{student.section?.name ?? '—'}</td>}
+                                {visible.includes('Session') && <td className="px-4 py-3 whitespace-nowrap">{student.academic_session?.name ?? '—'}</td>}
+                                {visible.includes('Admission date') && <td className="px-4 py-3 whitespace-nowrap">{student.admission_date?.slice(0, 10) ?? '—'}</td>}
+                                {visible.includes('Status') && <td className="px-4 py-3 whitespace-nowrap"><span className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${student.status === 'active' ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{student.status}</span></td>}
                                 {visible.includes('Actions') && (
-                                    <td className="relative px-3 py-3">
+                                    <td className="relative px-4 py-3 text-right">
                                         <button type="button" aria-label="Student actions" onClick={() => setMenu(menu === student.id ? null : student.id)} className="rounded-lg p-2 hover:bg-slate-100"><MoreHorizontal className="size-4" /></button>
                                         {menu === student.id && (
-                                            <div className="absolute right-3 z-10 w-36 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                                            <div className="absolute right-4 z-10 w-36 rounded-xl border border-slate-200 bg-white p-1 text-left shadow-lg">
                                                 <button type="button" className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-50" onClick={() => { setViewing(student.id); setMenu(null); }}>View</button>
                                                 <button type="button" className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-50" onClick={() => { setEditing(student); setOpen(true); setMenu(null); }}>Edit</button>
                                                 <button type="button" className="block w-full rounded-lg px-3 py-2 text-left text-rose-700 hover:bg-rose-50" onClick={() => remove(student)}>Delete</button>

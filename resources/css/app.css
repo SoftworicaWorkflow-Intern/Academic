@@ -5,6 +5,7 @@
 /* Lock the page so only inner panels scroll — prevents the left nav from moving */
 html,
 body,
+#app,
 #root {
     height: 100%;
     overflow: hidden;
