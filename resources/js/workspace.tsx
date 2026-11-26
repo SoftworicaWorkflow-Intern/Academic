@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { AppSidebar, visibleGroups, type NavGroup } from './sidebar';
 import { Link, Outlet, useNavigate, useParams } from 'react-router-dom';
-import { api, getErrorMessage, type AuthUser, type InstitutionDashboard, type PlatformDashboard } from './api';
+import { api, getErrorMessage, type AuthUser, type PlatformDashboard } from './api';
 import { TopNavbar } from './top-navbar';
 export { StudentsPage } from './students-page';
 
@@ -476,25 +476,7 @@ export function PlansPage() {
     );
 }
 
-export function InstitutionHome() {
-    const [dashboard, setDashboard] = useState<InstitutionDashboard | null>(null);
-
-    useEffect(() => {
-        api.get<{ data: InstitutionDashboard }>('/api/institution/dashboard').then(({ data }) => setDashboard(data.data));
-    }, []);
-
-    return (
-        <>
-            <PageTitle title={dashboard?.institution.name ?? 'Institution'} detail="Figures come from this institution only." />
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <Metric label="Students" value={dashboard?.students_total} />
-                <Metric label="Teachers" value={dashboard?.teachers_total} />
-                <Metric label="Open invoices" value={dashboard?.invoices_open} />
-                <Metric label={`Outstanding ${dashboard?.currency ?? 'NPR'}`} value={dashboard?.fees_outstanding} />
-            </div>
-        </>
-    );
-}
+export { InstitutionHome } from './dashboard';
 
 interface StudentRow {
     id: number;
