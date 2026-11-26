@@ -165,7 +165,7 @@ function Shell({
         .filter((group) => group.items.length > 0);
 
     return (
-        <div className={`bg-[#f4f6f8] text-slate-900 lg:grid lg:h-screen lg:overflow-hidden ${collapsed ? 'lg:grid-cols-[76px_minmax(0,1fr)]' : 'lg:grid-cols-[272px_minmax(0,1fr)]'}`}>
+        <div className={`flex h-full flex-col bg-[#f4f6f8] text-slate-900 lg:grid lg:overflow-hidden ${collapsed ? 'lg:grid-cols-[76px_minmax(0,1fr)]' : 'lg:grid-cols-[272px_minmax(0,1fr)]'}`}>
             {open && <button className="fixed inset-0 z-30 bg-slate-950/40 lg:hidden" aria-label="Close navigation" onClick={() => setOpen(false)} />}
             <aside className={`fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r border-slate-200 bg-[#f7f8fa] transition-transform lg:static lg:h-full lg:w-auto lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 px-4">

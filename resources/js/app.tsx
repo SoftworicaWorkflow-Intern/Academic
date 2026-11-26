@@ -290,7 +290,7 @@ function LoginPage() {
     }
 
     return (
-        <main className="min-h-screen bg-[#f5f7fb] text-slate-900">
+        <main className="h-full overflow-y-auto bg-[#f5f7fb] text-slate-900">
             <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
                 <section className="relative hidden overflow-hidden bg-[#102a56] px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between xl:px-20">
                     <div className="absolute -right-32 -top-32 size-[28rem] rounded-full border border-white/10" />
