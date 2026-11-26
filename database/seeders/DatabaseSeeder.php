@@ -87,5 +87,7 @@ class DatabaseSeeder extends Seeder
         setPermissionsTeamId($institution->getKey());
         $accountant->assignRole('accountant');
         setPermissionsTeamId(null);
+
+        $this->call([DemoDataSeeder::class]);
     }
 }

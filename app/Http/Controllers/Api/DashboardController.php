@@ -92,29 +92,29 @@ class DashboardController extends Controller
         $unpaidInvoices   = Invoice::query()->whereIn('status', ['open', 'partial'])->count();
         $pendingPayments  = $unpaidInvoices;
 
-        // --- Monthly collection for chart (last 6 months) ---
+        // --- Monthly collection for chart (last 6 months) --- SQLite-compatible
         $monthlyCollection = Payment::query()
             ->where('status', 'posted')
             ->where('paid_on', '>=', now()->subMonths(5)->startOfMonth())
             ->select(
-                DB::raw("YEAR(paid_on) as yr"),
-                DB::raw("MONTH(paid_on) as mo"),
+                DB::raw("strftime('%Y', paid_on) as yr"),
+                DB::raw("strftime('%m', paid_on) as mo"),
                 DB::raw("SUM(amount) as total"),
             )
             ->groupBy('yr', 'mo')
             ->orderBy('yr')->orderBy('mo')
             ->get()
             ->map(fn ($r) => [
-                'label' => Carbon::create((int) $r->yr, (int) $r->mo)->format('M Y'),
+                'label' => Carbon::createFromFormat('Y-m', $r->yr . '-' . $r->mo)->format('M Y'),
                 'value' => (int) $r->total,
             ]);
 
-        // --- Monthly attendance (last 6 months) ---
+        // --- Monthly attendance (last 6 months) --- SQLite-compatible
         $monthlyAttendance = AttendanceRecord::query()
             ->where('attended_on', '>=', now()->subMonths(5)->startOfMonth())
             ->select(
-                DB::raw("YEAR(attended_on) as yr"),
-                DB::raw("MONTH(attended_on) as mo"),
+                DB::raw("strftime('%Y', attended_on) as yr"),
+                DB::raw("strftime('%m', attended_on) as mo"),
                 DB::raw("SUM(CASE WHEN status='present' THEN 1 ELSE 0 END) as present"),
                 DB::raw("SUM(CASE WHEN status='absent' THEN 1 ELSE 0 END) as absent"),
                 DB::raw("COUNT(*) as total"),
@@ -123,26 +123,26 @@ class DashboardController extends Controller
             ->orderBy('yr')->orderBy('mo')
             ->get()
             ->map(fn ($r) => [
-                'label'   => Carbon::create((int) $r->yr, (int) $r->mo)->format('M Y'),
+                'label'   => Carbon::createFromFormat('Y-m', $r->yr . '-' . $r->mo)->format('M Y'),
                 'present' => (int) $r->present,
                 'absent'  => (int) $r->absent,
                 'total'   => (int) $r->total,
                 'pct'     => $r->total > 0 ? round(($r->present / $r->total) * 100, 1) : 0,
             ]);
 
-        // --- Student enrollment by month (last 6 months) ---
+        // --- Student enrollment by month (last 6 months) --- SQLite-compatible
         $enrollmentGrowth = Student::query()
             ->where('created_at', '>=', now()->subMonths(5)->startOfMonth())
             ->select(
-                DB::raw("YEAR(created_at) as yr"),
-                DB::raw("MONTH(created_at) as mo"),
+                DB::raw("strftime('%Y', created_at) as yr"),
+                DB::raw("strftime('%m', created_at) as mo"),
                 DB::raw("COUNT(*) as total"),
             )
             ->groupBy('yr', 'mo')
             ->orderBy('yr')->orderBy('mo')
             ->get()
             ->map(fn ($r) => [
-                'label' => Carbon::create((int) $r->yr, (int) $r->mo)->format('M Y'),
+                'label' => Carbon::createFromFormat('Y-m', $r->yr . '-' . $r->mo)->format('M Y'),
                 'value' => (int) $r->total,
             ]);
 
